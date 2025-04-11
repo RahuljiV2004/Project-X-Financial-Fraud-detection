@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import '../styles/login.css';
+import '../styles/auth.css';
 
 const LoginPage = () => {
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    role: 'admin'
+    password: ''
   });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,86 +19,47 @@ const LoginPage = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      setIsLoading(true);
-      try {
-        await login(formData.email, formData.password, formData.role);
-        // Navigate based on role after successful login
-        if (formData.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/customer/dashboard');
-        }
-      } catch (error) {
-        setErrors({ submit: 'Invalid credentials. Please try again.' });
-      } finally {
-        setIsLoading(false);
+    try {
+      setError('');
+      setLoading(true);
+      const userData = await login(formData.email, formData.password);
+      console.log('Login successful:', userData);
+      
+      // Navigate based on user role
+      if (userData.role === 'admin') {
+        navigate('/admin-dashboard');
+      } else {
+        navigate('/customers-dashboard');
       }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to login');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <div className="login-header">
-          <h1>Welcome Back</h1>
-          <p>Please login to access your dashboard</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="role">Login As</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="form-control"
-            >
-              <option value="admin">Admin</option>
-              <option value="customer">Customer</option>
-            </select>
-          </div>
-
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1>Login</h1>
+        {error && <div className="error-message">{error}</div>}
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="email">Email</label>
             <input
               type="email"
               id="email"
               name="email"
+              className="form-control"
               value={formData.email}
               onChange={handleChange}
-              className={`form-control ${errors.email ? 'error' : ''}`}
-              placeholder="Enter your email"
+              required
             />
-            {errors.email && <span className="error-message">{errors.email}</span>}
           </div>
 
           <div className="form-group">
@@ -108,40 +68,28 @@ const LoginPage = () => {
               type="password"
               id="password"
               name="password"
+              className="form-control"
               value={formData.password}
               onChange={handleChange}
-              className={`form-control ${errors.password ? 'error' : ''}`}
-              placeholder="Enter your password"
+              required
             />
-            {errors.password && <span className="error-message">{errors.password}</span>}
           </div>
 
-          {errors.submit && (
-            <div className="error-message text-center">{errors.submit}</div>
-          )}
-
-          <div className="form-group">
-            <button 
-              type="submit" 
-              className="btn btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Logging in...' : 'Login'}
-            </button>
-          </div>
-
-          <div className="form-footer">
-            <p>
-              Don't have an account?{' '}
-              <a href="/register" className="link">
-                Register here
-              </a>
-            </p>
-            <a href="/forgot-password" className="link">
-              Forgot Password?
-            </a>
-          </div>
+          <button 
+            type="submit" 
+            className="btn btn-primary w-full" 
+            disabled={loading}
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
+
+        <div className="auth-links">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-link">
+            Register here
+          </Link>
+        </div>
       </div>
     </div>
   );

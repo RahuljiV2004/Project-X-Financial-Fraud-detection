@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import ChatBot from '../components/ChatBot';
 import '../styles/landing.css';
 
 const LandingPage = () => {
@@ -43,8 +44,10 @@ const LandingPage = () => {
       <footer className="landing-footer">
         <p>&copy; 2024 Fraud Detection System. All rights reserved.</p>
       </footer>
+
+      <ChatBot />
     </div>
   );
 };
 
-export default LandingPage; 
+export default LandingPage;

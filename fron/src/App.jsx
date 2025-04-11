@@ -10,6 +10,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import TransactionHistory from './pages/TransactionHistory';
 import Settings from './pages/Settings';
 import LandingPage from './pages/LandingPage';
+import Customer from './pages/customer'
 import './styles/App.css';
 
 // Protected Route Component
@@ -65,6 +66,11 @@ function App() {
               <Route path="/dashboard" element={
                 <ProtectedRoute allowedRoles={['customer']}>
                   <CustomerDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/customers-dashboard" element={
+                <ProtectedRoute allowedRoles={['customer']}>
+                  <Customer />
                 </ProtectedRoute>
               } />
               <Route path="/dashboard/transactions" element={

@@ -1,5 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+const API_URL = 'http://localhost:5001/api/auth';
+
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -12,11 +14,8 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Check for stored token and user data on mount
-    const token = localStorage.getItem('authToken');
     const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
+    if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
     setLoading(false);
@@ -25,44 +24,40 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setError('');
-      // Check for registered users in localStorage
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const registeredUser = registeredUsers.find(user => user.email === email);
-
-      if (registeredUser && password === registeredUser.password) {
-        setUser(registeredUser);
-        localStorage.setItem('authToken', `dummy-token-${registeredUser.role}`);
-        localStorage.setItem('user', JSON.stringify(registeredUser));
-        return registeredUser;
-      }
+      console.log('Attempting login with:', { email, password });
       
-      // Check default users
-      if (email === 'admin@fraudet.com' && password === 'admin123') {
-        const userData = {
-          id: '1',
-          email,
-          role: 'admin',
-          name: 'Admin User'
-        };
-        setUser(userData);
-        localStorage.setItem('authToken', 'dummy-token-admin');
-        localStorage.setItem('user', JSON.stringify(userData));
-        return userData;
-      } else if (email === 'customer@fraudet.com' && password === 'customer123') {
-        const userData = {
-          id: '2',
-          email,
-          role: 'customer',
-          name: 'Customer User'
-        };
-        setUser(userData);
-        localStorage.setItem('authToken', 'dummy-token-customer');
-        localStorage.setItem('user', JSON.stringify(userData));
-        return userData;
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include'
+      });
+
+      console.log('Response status:', response.status);
+      let data;
+      
+      try {
+        const textResponse = await response.text();
+        console.log('Raw response:', textResponse);
+        data = JSON.parse(textResponse);
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Invalid server response');
       }
-      throw new Error('Invalid credentials');
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to login');
+      }
+
+      console.log('Login successful:', data);
+      setUser(data);
+      localStorage.setItem('user', JSON.stringify(data));
+      return data;
     } catch (err) {
-      setError(err.message);
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to login');
       throw err;
     }
   };
@@ -70,31 +65,39 @@ export const AuthProvider = ({ children }) => {
   const register = async (email, password, role) => {
     try {
       setError('');
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const name = email.split('@')[0];
       
-      // Check if user already exists
-      if (registeredUsers.some(user => user.email === email)) {
-        throw new Error('User already exists');
+      console.log('Sending registration request:', { email, role, name });
+      
+      const response = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password, role, name }),
+        credentials: 'include'
+      });
+
+      let data;
+      try {
+        const textResponse = await response.text();
+        console.log('Raw response:', textResponse);
+        data = JSON.parse(textResponse);
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Invalid server response');
       }
 
-      const userData = {
-        id: Math.random().toString(36).substr(2, 9),
-        email,
-        password, // Store password for demo purposes only
-        role,
-        name: email.split('@')[0]
-      };
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create account');
+      }
 
-      // Add to registered users
-      registeredUsers.push(userData);
-      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-
-      // Log user in
-      setUser(userData);
-      localStorage.setItem('authToken', `dummy-token-${role}`);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return userData;
+      console.log('Registration successful:', data);
+      setUser(data);
+      localStorage.setItem('user', JSON.stringify(data));
+      return data;
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.message);
       throw err;
     }
@@ -102,7 +105,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('authToken');
     localStorage.removeItem('user');
   };
 
