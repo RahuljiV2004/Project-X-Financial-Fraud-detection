@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🚨 Crypto Fraud Detection</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #ffffff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    input[list], button {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      width: 250px;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 24px;
+    }
+
+    .danger-list {
+      margin-top: 40px;
+    }
+
+    .danger-list h3 {
+      color: #ff4d4d;
+    }
+
+    .danger-item {
+      background: #1f1f1f;
+      margin: 5px auto;
+      padding: 10px;
+      width: 60%;
+      border-left: 5px solid red;
+    }
+
+    .coin-table {
+      margin: 40px auto;
+      border-collapse: collapse;
+      width: 80%;
+      background-color: #1f1f1f;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .coin-table th, .coin-table td {
+      padding: 12px;
+      border-bottom: 1px solid #333;
+    }
+
+    .coin-table th {
+      background-color: #292e36;
+      color: #00eaff;
+    }
+
+    .positive {
+      color: #4caf50;
+    }
+
+    .negative {
+      color: #ff4d4d;
+    }
+
+    .top-right {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 250px;
+      text-align: left;
+    }
+
+    .top-right h4 {
+      margin-top: 0;
+      color: #00eaff;
+    }
+
+    .top-right ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .top-right li {
+      padding: 2px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-right" id="registered-coins-box" style="display: none;">
+    <h4>📌 Tracking Coins:</h4>
+    <ul id="registered-coins-list"></ul>
+  </div>
+
+  <h1>🚨 Crypto Spike Monitor</h1>
+
+  <label for="coin-input">Search a coin to check:</label><br>
+  <input list="coin-list" id="coin-input" placeholder="">
+  <datalist id="coin-list"></datalist>
+  <br>
+  <button onclick="checkSelectedCoin()">Check Safety</button>
+  <button onclick="registerCoin()">📌 Track This Coin</button>
+
+  <div class="status" id="coin-status"></div>
+
+  <div class="danger-list" id="danger-list" style="display: none;">
+    <h3 id="danger-heading"></h3>
+    <div id="danger-coins"></div>
+  </div>
+
+  <h2>📈 Real-time Coin Tracker</h2>
+  <table class="coin-table">
+    <thead>
+      <tr>
+        <th>Coin</th>
+        <th>Price (USDT)</th>
+        <th>5 Min Change (%)</th>
+      </tr>
+    </thead>
+    <tbody id="coin-table-body"></tbody>
+  </table>
+
+  <script>
+    let baselines = {};
+    let registeredCoins = new Set();
+    const coinInput = document.getElementById('coin-input');
+    const coinList = document.getElementById('coin-list');
+    const statusDiv = document.getElementById('coin-status');
+    const dangerBox = document.getElementById('danger-coins');
+    const dangerListContainer = document.getElementById('danger-list');
+    const dangerHeading = document.getElementById('danger-heading');
+    const registeredCoinsBox = document.getElementById('registered-coins-box');
+    const registeredCoinsList = document.getElementById('registered-coins-list');
+    const coinTableBody = document.getElementById('coin-table-body');
+
+    function getStatusLabel(change) {
+      if (change >= 300) return `🔴 DANGER (${change.toFixed(2)}% spike)`;
+      else if (change >= 150) return `🟠 HIGH RISK (${change.toFixed(2)}% spike)`;
+      else if (change >= 50) return `🟡 WATCH (${change.toFixed(2)}% spike)`;
+      else return `✅ SAFE (${change.toFixed(2)}% change)`;
+    }
+
+    function registerCoin() {
+      const coin = coinInput.value.trim().toUpperCase();
+      if (coin) {
+        registeredCoins.add(coin);
+        updateRegisteredCoinsUI();
+      }
+    }
+
+    function updateRegisteredCoinsUI() {
+      registeredCoinsList.innerHTML = '';
+      registeredCoins.forEach(coin => {
+        const li = document.createElement('li');
+        li.textContent = coin;
+        registeredCoinsList.appendChild(li);
+      });
+      registeredCoinsBox.style.display = registeredCoins.size > 0 ? 'block' : 'none';
+    }
+
+    async function fetchAllUSDTCoins() {
+      let response = await fetch('https://api.binance.com/api/v3/ticker/price');
+      let allCoins = await response.json();
+
+      let usdtCoins = allCoins.filter(coin => coin.symbol.endsWith('USDT') && coin.symbol.length <= 12);
+
+      // Add mock coins
+      usdtCoins.push({ symbol: '$HAWK', price: "1.0000" });
+      usdtCoins.push({ symbol: 'FAKE', price: "1.0000" });
+
+      coinList.innerHTML = '';
+
+      usdtCoins.forEach(coin => {
+        let option = document.createElement('option');
+        option.value = coin.symbol;
+        coinList.appendChild(option);
+
+        baselines[coin.symbol] = {
+          price: parseFloat(coin.price),
+          time: Date.now()
+        };
+      });
+    }
+
+    async function checkSelectedCoin() {
+      let symbol = coinInput.value.trim().toUpperCase();
+      if (!symbol.endsWith('USDT') && symbol !== '$HAWK' && symbol !== 'FAKE') {
+        statusDiv.innerHTML = `❌ Invalid symbol. Must end with USDT or be a mock coin.`;
+        return;
+      }
+
+      try {
+        let currentPrice;
+        if (symbol === '$HAWK') currentPrice = baselines[symbol].price * 6; // 500%
+        else if (symbol === 'FAKE') currentPrice = baselines[symbol].price * 2.5; // 150%
+        else {
+          let response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+          if (!response.ok) {
+            statusDiv.innerHTML = `❌ Symbol not found.`;
+            return;
+          }
+          let result = await response.json();
+          currentPrice = parseFloat(result.price);
+        }
+
+        let base = baselines[symbol] || { price: currentPrice, time: Date.now() };
+        let change = ((currentPrice - base.price) / base.price) * 100;
+
+        statusDiv.innerHTML = `${symbol}: ${getStatusLabel(change)}`;
+      } catch (e) {
+        statusDiv.innerHTML = `⚠️ Error fetching data.`;
+      }
+    }
+
+    async function checkAllCoinsForSpike() {
+      let response = await fetch('https://api.binance.com/api/v3/ticker/price');
+      let allCoins = await response.json();
+
+      // Add mock coins
+      allCoins.push({ symbol: '$HAWK', price: (baselines['$HAWK'].price * 6).toFixed(4) });
+      allCoins.push({ symbol: 'FAKE', price: (baselines['FAKE'].price * 2.5).toFixed(4) });
+
+      let currentTime = Date.now();
+      coinTableBody.innerHTML = '';
+      dangerBox.innerHTML = '';
+      let dangerCount = 0;
+
+      // Sort coins alphabetically
+      allCoins.sort((a, b) => a.symbol.localeCompare(b.symbol));
+
+      for (const coin of allCoins) {
+        let symbol = coin.symbol;
+        if (!symbol.endsWith("USDT") && symbol !== '$HAWK' && symbol !== 'FAKE') continue;
+
+        let price = parseFloat(coin.price);
+
+        if (!baselines[symbol]) {
+          baselines[symbol] = { price: price, time: currentTime };
+          continue;
+        }
+
+        let base = baselines[symbol];
+        if ((currentTime - base.time) > 5 * 60 * 1000) {
+          baselines[symbol] = { price: price, time: currentTime };
+        }
+
+        let change = ((price - base.price) / base.price) * 100;
+
+        if (change >= 50) {
+          dangerCount++;
+          let div = document.createElement('div');
+          div.className = 'danger-item';
+          div.id = `danger-${symbol}`;
+          div.textContent = `${symbol}: ${getStatusLabel(change)} in under 5 mins`;
+          dangerBox.appendChild(div);
+
+          // Notify backend about the spike
+          try {
+            const notifyResponse = await fetch('http://localhost:5000/notify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                symbol: symbol,
+                spike_value: change
+              })
+            });
+            const result = await notifyResponse.json();
+            console.log(`Notification status for ${symbol}:`, result);
+          } catch (error) {
+            console.error(`Failed to notify about ${symbol}:`, error);
+          }
+        }
+
+        // Display all coins in the table
+        let row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${symbol}</td>
+          <td>$${price.toFixed(4)}</td>
+          <td class="${change >= 0 ? 'positive' : 'negative'}">${change.toFixed(2)}%</td>
+        `;
+        coinTableBody.appendChild(row);
+      }
+
+      dangerListContainer.style.display = dangerCount > 0 ? 'block' : 'none';
+      dangerHeading.innerText = dangerCount > 0 ? `⚠️ Coins With Sudden Spikes` : '';
+    }
+
+    fetchAllUSDTCoins();
+    setInterval(checkAllCoinsForSpike, 10000);
+  </script>
+</body>
+</html>
+
+
+
+
