@@ -15,10 +15,10 @@ const Navbar = () => {
   };
 
   const features = [
-    { id: 'mobile', name: 'Mobile Transaction Fraud', path: '/dashboard/mobile' },
-    { id: 'upi', name: 'UPI Fraud Detection', path: '/dashboard/upi' },
-    { id: 'card', name: 'Card Fraud Detection', path: '/dashboard/card' },
-    { id: 'account', name: 'Account Takeover', path: '/dashboard/account' }
+    { id: 'card', name: 'Risk Scoring', path: 'https://riskscore-jtrbvtvpmmvvburecvvnuu.streamlit.app/' },
+    { id: 'upi', name: 'Fraud Detection', path: 'https://transactionanalysis-e7e4cex9qeg6rvchcrrqtd.streamlit.app/' },
+    { id: 'mobile', name: 'Money Laundering', path: 'https://moneylaundering-dwqgmrw4b7mwxaznp9g7mp.streamlit.app/' },
+    { id: 'account', name: 'UPI Fraud Detection', path: '/dashboard/account' }
   ];
 
   return (
