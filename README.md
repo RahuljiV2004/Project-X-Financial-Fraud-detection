@@ -1,4 +1,4 @@
-# Mommed Project
+# Financial Fraud detection
 
 ## Overview
 This repository contains a full-stack application with cryptocurrency integration capabilities. The project is structured with separate frontend and backend components, along with cryptocurrency-related features.
